@@ -1,7 +1,4 @@
 using JwtToken;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,7 +6,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(x =>
 {
-    x.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme()
+    x.AddSecurityDefinition("EncryptedBearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme()
     {
         Description = "Jwt Token Description",
         Name = "Authorization",
@@ -24,22 +21,13 @@ builder.Services.Configure<JwtSettings>(jwtSettingsSection);
 builder.Services.AddTransient<TokenService>();
 
 builder.Services.AddAuthentication(x =>
-    {
-        x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        x.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-        x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    })
-    .AddJwtBearer(options => options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSettings.Issuer,
-        ValidAudience = jwtSettings.Issuer,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
-        ClockSkew = TimeSpan.Zero
-    });
+{
+    x.DefaultChallengeScheme = Constants.AuthenticationScheme;
+    x.DefaultSignInScheme = Constants.AuthenticationScheme;
+    x.DefaultAuthenticateScheme = Constants.AuthenticationScheme;
+    x.DefaultScheme = Constants.AuthenticationScheme;
+})
+    .AddScheme<EncryptedJwtAuthenticationSchemeOptions, EncryptedJwtAuthenticationHandler>(Constants.AuthenticationScheme, null);
 
 // Configure the HTTP request pipeline.
 var app = builder.Build();

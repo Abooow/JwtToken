@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -8,11 +9,15 @@ namespace JwtToken;
 
 public class TokenService
 {
+    private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly JwtSettings _jwtSettings;
+    private readonly ILogger<TokenService> _logger;
 
-    public TokenService(IOptions<JwtSettings> jwtSettings)
+    public TokenService(IDataProtectionProvider dataProtectionProvider, IOptions<JwtSettings> jwtSettings, ILogger<TokenService> logger)
     {
+        _dataProtectionProvider = dataProtectionProvider;
         _jwtSettings = jwtSettings.Value;
+        _logger = logger;
     }
 
     public string GenerateToken(IEnumerable<Claim> claims)
@@ -20,18 +25,33 @@ public class TokenService
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
-        var token = new JwtSecurityToken(
+        var securityToken = new JwtSecurityToken(
             _jwtSettings.Issuer,
             _jwtSettings.Issuer,
             claims,
             expires: DateTime.UtcNow.Add(_jwtSettings.ExpirationTime),
             signingCredentials: credentials);
 
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        string token = new JwtSecurityTokenHandler().WriteToken(securityToken);
+        var protector = _dataProtectionProvider.CreateProtector(_jwtSettings.EncryptiondKey);
+        
+        return protector.Protect(token);
     }
 
-    public JwtSecurityToken? DecodeToken(string token)
+    public JwtSecurityToken? DecodeToken(string encryptedToken)
     {
+        string token;
+        try
+        {
+            var protector = _dataProtectionProvider.CreateProtector(_jwtSettings.EncryptiondKey);
+            token = protector.Unprotect(encryptedToken);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to decrypt token.");
+            return null;
+        }
+
         return ValidateToken(token) ? new JwtSecurityTokenHandler().ReadJwtToken(token) : null;
     }
 
@@ -60,12 +80,12 @@ public class TokenService
         return true;
     }
 
-    public IEnumerable<Claim> GenerateClaims(string userId, string email)
+    public IEnumerable<Claim> GenerateClaims(string email, string? role)
     {
         return new Claim[]
         {
-            new (JwtRegisteredClaimNames.NameId, userId),
             new (JwtRegisteredClaimNames.Email, email),
+            new (ClaimsIdentity.DefaultRoleClaimType, role ?? "None"),
             new (JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
     }

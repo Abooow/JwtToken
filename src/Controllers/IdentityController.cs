@@ -15,9 +15,9 @@ public class IdentityController : ControllerBase
     }
 
     [HttpGet]
-    public IActionResult SignIn([FromQuery] string email)
+    public IActionResult SignIn([FromQuery] string email, [FromQuery] string? role)
     {
-        string token = _tokenService.GenerateToken(_tokenService.GenerateClaims(email.GetHashCode().ToString(), email));
+        string token = _tokenService.GenerateToken(_tokenService.GenerateClaims(email, role));
 
         return Ok(new { token });
     }
@@ -36,6 +36,13 @@ public class IdentityController : ControllerBase
     [Authorize]
     [HttpGet("test-auth")]
     public IActionResult TestAuth()
+    {
+        return Ok(User.Claims.Select(x => new { x.Type, x.Value }));
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpGet("test-adminauth")]
+    public IActionResult TestAdminAuth()
     {
         return Ok(User.Claims.Select(x => new { x.Type, x.Value }));
     }
