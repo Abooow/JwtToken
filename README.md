@@ -1,8 +1,8 @@
 # ASP.NET Core 6 - JWT Authentication
 
-This repo is just a basic demonstration on how [JWT](https://jwt.io/) token authentication can be used in a ASP.NET Core app.
+This repository is just a basic demonstration on how [JWT](https://jwt.io/) token authentication can be used in a ASP.NET Core app.
 
-The branches [master](https://github.com/Abooow/JwtToken/tree/master) and [basic](https://github.com/Abooow/JwtToken/tree/basic) shows how to create a JWT token without any encrytion, the contents of the token can still not be tampered with but the claims can easily be viewed.
+The branches [master](https://github.com/Abooow/JwtToken/tree/master) and [basic](https://github.com/Abooow/JwtToken/tree/basic) demonstrates how to create a JWT token without any encrytion, the contents of the token can still not be tampered with but the claims can easily be viewed.
 If you don't want your users to be able to see the content of the token, then you could encrypt it, check out the [encrypted-token](https://github.com/Abooow/JwtToken/tree/encrypted-token) branch that achieves this.
 
 ---
