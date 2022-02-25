@@ -1,8 +1,9 @@
-﻿using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Net;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 
 namespace JwtToken;
 
@@ -15,7 +16,34 @@ public class TokenService
         _jwtSettings = jwtSettings.Value;
     }
 
+    public Cookie GenerateCookie(IEnumerable<Claim> claims)
+    {
+        var expires = DateTime.UtcNow.Add(_jwtSettings.ExpirationTime);
+        string token = GenerateToken(claims, expires);
+
+        return new Cookie()
+        {
+            Name = CookieConstats.AuthToken,
+            Value = token,
+            Expires = expires,
+            Path = "/",
+            Domain = _jwtSettings.Domain,
+            HttpOnly = true,
+            Secure = true,
+        };
+    }
+
     public string GenerateToken(IEnumerable<Claim> claims)
+    {
+        return GenerateToken(claims, DateTime.UtcNow.Add(_jwtSettings.ExpirationTime));
+    }
+
+    public JwtSecurityToken? DecodeToken(string token)
+    {
+        return ValidateToken(token) ? new JwtSecurityTokenHandler().ReadJwtToken(token) : null;
+    }
+
+    private string GenerateToken(IEnumerable<Claim> claims, DateTime expires)
     {
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
@@ -24,15 +52,11 @@ public class TokenService
             _jwtSettings.Issuer,
             _jwtSettings.Issuer,
             claims,
-            expires: DateTime.UtcNow.Add(_jwtSettings.ExpirationTime),
+            notBefore: null,
+            expires,
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
-    }
-
-    public JwtSecurityToken? DecodeToken(string token)
-    {
-        return ValidateToken(token) ? new JwtSecurityTokenHandler().ReadJwtToken(token) : null;
     }
 
     private bool ValidateToken(string token)
