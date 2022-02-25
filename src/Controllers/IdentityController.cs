@@ -17,9 +17,19 @@ public class IdentityController : ControllerBase
     [HttpGet]
     public IActionResult SignIn([FromQuery] string email)
     {
-        string token = _tokenService.GenerateToken(_tokenService.GenerateClaims(email.GetHashCode().ToString(), email));
+        var cookie = _tokenService.GenerateCookie(_tokenService.GenerateClaims(email.GetHashCode().ToString(), email));
 
-        return Ok(new { token });
+        var cookieOptions = new CookieOptions()
+        {
+            Expires = cookie.Expires,
+            Path = cookie.Path,
+            Domain = cookie.Domain,
+            HttpOnly = cookie.HttpOnly,
+            Secure = cookie.Secure
+        };
+        Response.Cookies.Append(cookie.Name, cookie.Value);
+
+        return Ok(new { Token = cookie.Value });
     }
 
     [HttpGet("test-token")]
