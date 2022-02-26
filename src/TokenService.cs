@@ -84,12 +84,12 @@ public class TokenService
         return true;
     }
 
-    public IEnumerable<Claim> GenerateClaims(string userId, string email)
+    public IEnumerable<Claim> GenerateClaims(string email, string? role)
     {
         return new Claim[]
         {
-            new (JwtRegisteredClaimNames.NameId, userId),
             new (JwtRegisteredClaimNames.Email, email),
+            new (ClaimsIdentity.DefaultRoleClaimType, role ?? "None"),
             new (JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
     }
