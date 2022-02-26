@@ -15,9 +15,9 @@ public class IdentityController : ControllerBase
     }
 
     [HttpGet]
-    public IActionResult SignIn([FromQuery] string email)
+    public IActionResult SignIn([FromQuery] string email, [FromQuery] string? role)
     {
-        var cookie = _tokenService.GenerateCookie(_tokenService.GenerateClaims(email.GetHashCode().ToString(), email));
+        var cookie = _tokenService.GenerateCookie(_tokenService.GenerateClaims(email, role));
 
         var cookieOptions = new CookieOptions()
         {
@@ -27,7 +27,7 @@ public class IdentityController : ControllerBase
             HttpOnly = cookie.HttpOnly,
             Secure = cookie.Secure
         };
-        Response.Cookies.Append(cookie.Name, cookie.Value);
+        Response.Cookies.Append(cookie.Name, cookie.Value, cookieOptions);
 
         return Ok(new { Token = cookie.Value });
     }
@@ -46,6 +46,13 @@ public class IdentityController : ControllerBase
     [Authorize]
     [HttpGet("test-auth")]
     public IActionResult TestAuth()
+    {
+        return Ok(User.Claims.Select(x => new { x.Type, x.Value }));
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpGet("test-auth-admin")]
+    public IActionResult TestAdminAuth()
     {
         return Ok(User.Claims.Select(x => new { x.Type, x.Value }));
     }
