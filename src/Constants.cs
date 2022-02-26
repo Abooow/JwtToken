@@ -1,6 +1,6 @@
 ﻿namespace JwtToken;
 
-public class Constants
+public static class Constants
 {
     public const string AuthenticationScheme = "EncryptedBearer";
 }

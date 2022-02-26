@@ -23,7 +23,6 @@ builder.Services.AddTransient<TokenService>();
 builder.Services.AddAuthentication(x =>
 {
     x.DefaultChallengeScheme = Constants.AuthenticationScheme;
-    x.DefaultSignInScheme = Constants.AuthenticationScheme;
     x.DefaultAuthenticateScheme = Constants.AuthenticationScheme;
     x.DefaultScheme = Constants.AuthenticationScheme;
 })

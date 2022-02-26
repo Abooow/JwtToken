@@ -1,11 +1,10 @@
-﻿using Microsoft.AspNetCore.Authentication;
-using Microsoft.Extensions.Options;
-using Microsoft.Net.Http.Headers;
-using System.Net;
+﻿using System.Net;
 using System.Net.Mime;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Options;
 
 namespace JwtToken;
 
@@ -28,17 +27,14 @@ public class EncryptedJwtAuthenticationHandler : AuthenticationHandler<Encrypted
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        if (!Request.Headers.ContainsKey(HeaderNames.Authorization))
+        if (!Request.Cookies.ContainsKey(CookieConstats.AuthToken)
+            || Request.Cookies.Count(cookie => cookie.Key == CookieConstats.AuthToken) > 1)
+        {
             return Task.FromResult(AuthenticateResult.NoResult());
+        }
 
-        string authorizationHeader = Request.Headers[HeaderNames.Authorization].ToString();
-
-        if (!authorizationHeader.StartsWith($"{Constants.AuthenticationScheme} "))
-            return Task.FromResult(AuthenticateResult.NoResult());
-
-        string encodedToken = authorizationHeader[(Constants.AuthenticationScheme.Length + 1)..];
-
-        var token = _tokenService.DecodeToken(encodedToken);
+        string encryptedToken = Request.Cookies[CookieConstats.AuthToken]!;
+        var token = _tokenService.DecodeToken(encryptedToken);
 
         if (token is null)
             return Task.FromResult(AuthenticateResult.Fail("Invalid token."));

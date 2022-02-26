@@ -17,9 +17,19 @@ public class IdentityController : ControllerBase
     [HttpGet]
     public IActionResult SignIn([FromQuery] string email, [FromQuery] string? role)
     {
-        string token = _tokenService.GenerateToken(_tokenService.GenerateClaims(email, role));
+        var cookie = _tokenService.GenerateCookie(_tokenService.GenerateClaims(email, role));
 
-        return Ok(new { token });
+        var cookieOptions = new CookieOptions()
+        {
+            Expires = cookie.Expires,
+            Path = cookie.Path,
+            Domain = cookie.Domain,
+            HttpOnly = cookie.HttpOnly,
+            Secure = cookie.Secure
+        };
+        Response.Cookies.Append(cookie.Name, cookie.Value, cookieOptions);
+
+        return Ok(new { Token = cookie.Value });
     }
 
     [HttpGet("test-token")]
@@ -41,7 +51,7 @@ public class IdentityController : ControllerBase
     }
 
     [Authorize(Roles = "Admin")]
-    [HttpGet("test-adminauth")]
+    [HttpGet("test-auth-admin")]
     public IActionResult TestAdminAuth()
     {
         return Ok(User.Claims.Select(x => new { x.Type, x.Value }));
