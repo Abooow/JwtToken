@@ -54,7 +54,7 @@ public class EncryptedJwtAuthenticationHandler : AuthenticationHandler<Encrypted
 
     protected override async Task HandleForbiddenAsync(AuthenticationProperties properties)
     {
-        Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+        Response.StatusCode = (int)HttpStatusCode.Forbidden;
         Response.ContentType = MediaTypeNames.Application.Json;
         await Response.WriteAsync(JsonSerializer.Serialize(new { Message = "You are not authorized to access this resource." }));
     }
