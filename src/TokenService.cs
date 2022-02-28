@@ -27,7 +27,6 @@ public class TokenService
             Value = token,
             Expires = expires,
             Path = "/",
-            Domain = _jwtSettings.Domain,
             HttpOnly = true,
             Secure = true,
         };
