@@ -14,22 +14,39 @@ public class IdentityController : ControllerBase
         _tokenService = tokenService;
     }
 
-    [HttpGet]
-    public IActionResult SignIn([FromQuery] string email, [FromQuery] string? role)
+    [HttpGet("login")]
+    public IActionResult Login([FromQuery] string email, [FromQuery] string? role, [FromQuery] bool persist = true)
     {
         var cookie = _tokenService.GenerateCookie(_tokenService.GenerateClaims(email, role));
 
         var cookieOptions = new CookieOptions()
         {
-            Expires = cookie.Expires,
+            Expires = persist ? cookie.Expires : null,
             Path = cookie.Path,
-            Domain = cookie.Domain,
             HttpOnly = cookie.HttpOnly,
-            Secure = cookie.Secure
+            Secure = cookie.Secure,
+            SameSite = SameSiteMode.Lax
         };
         Response.Cookies.Append(cookie.Name, cookie.Value, cookieOptions);
 
-        return Ok(new { Token = cookie.Value });
+        return Ok();
+    }
+
+    [Authorize]
+    [HttpGet("logout")]
+    public IActionResult Logout()
+    {
+        var cookieOptions = new CookieOptions()
+        {
+            Expires = DateTime.UnixEpoch,
+            Path = "/",
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Lax
+        };
+        Response.Cookies.Append(CookieConstats.AuthToken, "", cookieOptions);
+
+        return Ok();
     }
 
     [HttpGet("test-token")]
