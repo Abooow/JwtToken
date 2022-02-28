@@ -49,7 +49,7 @@ public class TokenService
 
         var token = new JwtSecurityToken(
             _jwtSettings.Issuer,
-            _jwtSettings.Issuer,
+            _jwtSettings.Audience,
             claims,
             notBefore: null,
             expires,
@@ -71,7 +71,7 @@ public class TokenService
                 ValidateIssuer = true,
                 ValidateAudience = true,
                 ValidIssuer = _jwtSettings.Issuer,
-                ValidAudience = _jwtSettings.Issuer,
+                ValidAudience = _jwtSettings.Audience,
                 IssuerSigningKey = mySecurityKey
             }, out SecurityToken validatedToken);
         }
