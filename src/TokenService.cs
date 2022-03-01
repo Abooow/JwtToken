@@ -1,5 +1,4 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
-using System.Net;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Options;
@@ -16,33 +15,7 @@ public class TokenService
         _jwtSettings = jwtSettings.Value;
     }
 
-    public Cookie GenerateCookie(IEnumerable<Claim> claims)
-    {
-        var expires = DateTime.UtcNow.Add(_jwtSettings.ExpirationTime);
-        string token = GenerateToken(claims, expires);
-
-        return new Cookie()
-        {
-            Name = CookieConstats.AuthToken,
-            Value = token,
-            Expires = expires,
-            Path = "/",
-            HttpOnly = true,
-            Secure = true,
-        };
-    }
-
-    public string GenerateToken(IEnumerable<Claim> claims)
-    {
-        return GenerateToken(claims, DateTime.UtcNow.Add(_jwtSettings.ExpirationTime));
-    }
-
-    public JwtSecurityToken? DecodeToken(string token)
-    {
-        return ValidateToken(token) ? new JwtSecurityTokenHandler().ReadJwtToken(token) : null;
-    }
-
-    private string GenerateToken(IEnumerable<Claim> claims, DateTime expires)
+    public (string Token, IEnumerable<Claim> Claims) GenerateToken(IEnumerable<Claim> claims)
     {
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
@@ -52,10 +25,15 @@ public class TokenService
             _jwtSettings.Audience,
             claims,
             notBefore: null,
-            expires,
+            DateTime.UtcNow.Add(_jwtSettings.ExpirationTime),
             signingCredentials: credentials);
 
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        return (new JwtSecurityTokenHandler().WriteToken(token), token.Claims);
+    }
+
+    public JwtSecurityToken? DecodeToken(string token)
+    {
+        return ValidateToken(token) ? new JwtSecurityTokenHandler().ReadJwtToken(token) : null;
     }
 
     private bool ValidateToken(string token)
@@ -81,6 +59,16 @@ public class TokenService
         }
 
         return true;
+    }
+
+    public IEnumerable<Claim> CopyClaims(JwtSecurityToken copy)
+    {
+        return new Claim[]
+        {
+            copy.Claims.Single(x => x.Type == JwtRegisteredClaimNames.Email),
+            copy.Claims.Single(x => x.Type == ClaimsIdentity.DefaultRoleClaimType),
+            new (JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+        };
     }
 
     public IEnumerable<Claim> GenerateClaims(string email, string? role)

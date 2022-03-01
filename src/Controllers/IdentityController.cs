@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.IdentityModel.Tokens.Jwt;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace JwtToken.Controllers;
@@ -8,26 +9,36 @@ namespace JwtToken.Controllers;
 public class IdentityController : ControllerBase
 {
     private readonly TokenService _tokenService;
+    private readonly CookieService _cookieService;
+    private readonly RefreshTokenRepository _refreshTokenRepository;
 
-    public IdentityController(TokenService tokenService)
+    public IdentityController(TokenService tokenService, CookieService cookieService, RefreshTokenRepository refreshTokenRepository)
     {
         _tokenService = tokenService;
+        _cookieService = cookieService;
+        _refreshTokenRepository = refreshTokenRepository;
     }
 
     [HttpGet("login")]
     public IActionResult Login([FromQuery] string email, [FromQuery] string? role, [FromQuery] bool persist = true)
     {
-        var cookie = _tokenService.GenerateCookie(_tokenService.GenerateClaims(email, role));
+        string? existingJtiToken = User.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Jti)?.Value;
+        if (existingJtiToken is not null)
+            _refreshTokenRepository.InvalidateToken(existingJtiToken);
 
-        var cookieOptions = new CookieOptions()
+        var claims = _tokenService.GenerateClaims(email, role);
+        (string token, _) = _tokenService.GenerateToken(claims);
+
+        RefreshToken? refreshToken = null;
+        if (persist)
         {
-            Expires = persist ? cookie.Expires : null,
-            Path = cookie.Path,
-            HttpOnly = cookie.HttpOnly,
-            Secure = cookie.Secure,
-            SameSite = SameSiteMode.Lax
-        };
-        Response.Cookies.Append(cookie.Name, cookie.Value, cookieOptions);
+            string jti = claims.Single(x => x.Type == JwtRegisteredClaimNames.Jti).Value;
+            refreshToken = _refreshTokenRepository.CreateNewRefreshToken(jti);
+
+            _cookieService.SetCookie(CookieConstats.RefreshToken, refreshToken.Token, refreshToken.Expires);
+        }
+
+        _cookieService.SetCookie(CookieConstats.AuthToken, token, persist ? refreshToken!.Expires : null);
 
         return Ok();
     }
@@ -36,15 +47,11 @@ public class IdentityController : ControllerBase
     [HttpGet("logout")]
     public IActionResult Logout()
     {
-        var cookieOptions = new CookieOptions()
-        {
-            Expires = DateTime.UnixEpoch,
-            Path = "/",
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Lax
-        };
-        Response.Cookies.Append(CookieConstats.AuthToken, "", cookieOptions);
+        string existingJtiToken = User.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Jti)!.Value;
+        _refreshTokenRepository.InvalidateToken(existingJtiToken);
+
+        _cookieService.SetCookie(CookieConstats.AuthToken, "", DateTime.UnixEpoch);
+        _cookieService.SetCookie(CookieConstats.RefreshToken, "", DateTime.UnixEpoch);
 
         return Ok();
     }

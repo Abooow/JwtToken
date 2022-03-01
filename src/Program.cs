@@ -1,7 +1,4 @@
-using System.Text;
 using JwtToken;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,32 +18,18 @@ var jwtSettingsSection = builder.Configuration.GetSection(nameof(JwtSettings));
 var jwtSettings = jwtSettingsSection.Get<JwtSettings>();
 builder.Services.Configure<JwtSettings>(jwtSettingsSection);
 
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddTransient<CookieService>();
 builder.Services.AddTransient<TokenService>();
+builder.Services.AddTransient<RefreshTokenRepository>();
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtSettings.Issuer,
-            ValidAudience = jwtSettings.Audience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
-            ClockSkew = TimeSpan.Zero,
-        };
-
-        options.Events = new JwtBearerEvents
-        {
-            OnMessageReceived = context =>
-            {
-                context.Token = context.Request.Cookies[CookieConstats.AuthToken];
-                return Task.CompletedTask;
-            }
-        };
-    });
+builder.Services.AddAuthentication(x =>
+{
+    x.DefaultChallengeScheme = Constants.AuthenticationScheme;
+    x.DefaultAuthenticateScheme = Constants.AuthenticationScheme;
+    x.DefaultScheme = Constants.AuthenticationScheme;
+})
+    .AddScheme<AuthenticationSchemeOptions, AuthenticationHandler>(Constants.AuthenticationScheme, null);
 
 // Configure the HTTP request pipeline.
 var app = builder.Build();

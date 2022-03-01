@@ -6,4 +6,5 @@ public class JwtSettings
     public string Issuer { get; set; }
     public string Audience { get; set; }
     public TimeSpan ExpirationTime { get; set; }
+    public TimeSpan RefreshTokenExpirationTime { get; set; }
 }
