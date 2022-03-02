@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using System.Collections.Generic;
 using Microsoft.Extensions.Options;
 
 namespace JwtToken;
@@ -22,10 +21,10 @@ public class RefreshTokenRepository
         return refreshToken;
     }
 
-    public RefreshToken CreateNewRefreshToken(string jwtId)
+    public RefreshToken CreateNewRefreshToken(string jwtId, bool persist)
     {
         var expires = DateTime.UtcNow.Add(_jwtSettings.RefreshTokenExpirationTime);
-        var refreshToken = new RefreshToken(Guid.NewGuid().ToString(), jwtId, expires, false);
+        var refreshToken = new RefreshToken(Guid.NewGuid().ToString(), jwtId, expires, false, persist);
 
         refreshTokens.TryAdd(refreshToken.Token, refreshToken);
 
@@ -39,4 +38,4 @@ public class RefreshTokenRepository
     }
 }
 
-public record RefreshToken(string Token, string JwtId, DateTime Expires, bool Invalidated);
+public record RefreshToken(string Token, string JwtId, DateTime Expires, bool Invalidated, bool Persist);

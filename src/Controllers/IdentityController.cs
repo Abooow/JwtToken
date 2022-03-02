@@ -29,16 +29,12 @@ public class IdentityController : ControllerBase
         var claims = _tokenService.GenerateClaims(email, role);
         (string token, _) = _tokenService.GenerateToken(claims);
 
-        RefreshToken? refreshToken = null;
-        if (persist)
-        {
-            string jti = claims.Single(x => x.Type == JwtRegisteredClaimNames.Jti).Value;
-            refreshToken = _refreshTokenRepository.CreateNewRefreshToken(jti);
+        string jti = claims.Single(x => x.Type == JwtRegisteredClaimNames.Jti).Value;
+        RefreshToken refreshToken = _refreshTokenRepository.CreateNewRefreshToken(jti, persist);
 
-            _cookieService.SetCookie(CookieConstats.RefreshToken, refreshToken.Token, refreshToken.Expires);
-        }
-
-        _cookieService.SetCookie(CookieConstats.AuthToken, token, persist ? refreshToken!.Expires : null);
+        DateTime? expireCookieTime = persist ? refreshToken!.Expires : null;
+        _cookieService.SetCookie(CookieConstats.AuthToken, token, expireCookieTime);
+        _cookieService.SetCookie(CookieConstats.RefreshToken, refreshToken.Token, expireCookieTime);
 
         return Ok();
     }

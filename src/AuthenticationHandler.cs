@@ -86,11 +86,11 @@ public class AuthenticationHandler : AuthenticationHandler<AuthenticationSchemeO
         string newJwtId = newClaims.Single(x => x.Type == JwtRegisteredClaimNames.Jti).Value;
 
         var newAccessToken = _tokenService.GenerateToken(newClaims);
-        var newRefreshToken = _refreshTokenRepository.CreateNewRefreshToken(newJwtId);
+        var newRefreshToken = _refreshTokenRepository.CreateNewRefreshToken(newJwtId, refreshToken.Persist);
 
         // Override tokens.
-        _cookieService.SetCookie(CookieConstats.AuthToken, newAccessToken.Token, newRefreshToken.Expires);
-        _cookieService.SetCookie(CookieConstats.RefreshToken, newRefreshToken.Token, newRefreshToken.Expires);
+        _cookieService.SetCookie(CookieConstats.AuthToken, newAccessToken.Token, newRefreshToken.Persist ? newRefreshToken.Expires : null);
+        _cookieService.SetCookie(CookieConstats.RefreshToken, newRefreshToken.Token, newRefreshToken.Persist ? newRefreshToken.Expires : null);
 
         var claimsIdentity = new ClaimsIdentity(newAccessToken.Claims, Scheme.Name);
         var ticket = new AuthenticationTicket(new ClaimsPrincipal(claimsIdentity), Scheme.Name);
