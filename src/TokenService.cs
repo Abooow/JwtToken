@@ -65,6 +65,7 @@ public class TokenService
     {
         return new Claim[]
         {
+            copy.Claims.Single(x => x.Type == ClaimTypes.NameIdentifier),
             copy.Claims.Single(x => x.Type == JwtRegisteredClaimNames.Email),
             copy.Claims.Single(x => x.Type == ClaimsIdentity.DefaultRoleClaimType),
             new (JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
@@ -75,6 +76,7 @@ public class TokenService
     {
         return new Claim[]
         {
+            new (ClaimTypes.NameIdentifier, email),
             new (JwtRegisteredClaimNames.Email, email),
             new (ClaimsIdentity.DefaultRoleClaimType, role ?? "None"),
             new (JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())

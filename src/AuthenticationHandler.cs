@@ -84,9 +84,10 @@ public class AuthenticationHandler : AuthenticationHandler<AuthenticationSchemeO
         // Create new access token and refresh token.
         var newClaims = _tokenService.CopyClaims(token); // Same claims but new JWT Id.
         string newJwtId = newClaims.Single(x => x.Type == JwtRegisteredClaimNames.Jti).Value;
+        string userId = newClaims.Single(x => x.Type == ClaimTypes.NameIdentifier).Value;
 
         var newAccessToken = _tokenService.GenerateToken(newClaims);
-        var newRefreshToken = _refreshTokenRepository.CreateNewRefreshToken(newJwtId, refreshToken.Persist);
+        var newRefreshToken = _refreshTokenRepository.CreateNewRefreshToken(userId, newJwtId, refreshToken.Persist);
 
         // Override tokens.
         _cookieService.SetCookie(CookieConstats.AuthToken, newAccessToken.Token, newRefreshToken.Persist ? newRefreshToken.Expires : null);

@@ -21,10 +21,10 @@ public class RefreshTokenRepository
         return refreshToken;
     }
 
-    public RefreshToken CreateNewRefreshToken(string jwtId, bool persist)
+    public RefreshToken CreateNewRefreshToken(string userId, string jwtId, bool persist)
     {
         var expires = DateTime.UtcNow.Add(_jwtSettings.RefreshTokenExpirationTime);
-        var refreshToken = new RefreshToken(Guid.NewGuid().ToString(), jwtId, expires, false, persist);
+        var refreshToken = new RefreshToken(Guid.NewGuid().ToString(), userId, jwtId, expires, false, persist);
 
         refreshTokens.TryAdd(refreshToken.Token, refreshToken);
 
@@ -38,4 +38,4 @@ public class RefreshTokenRepository
     }
 }
 
-public record RefreshToken(string Token, string JwtId, DateTime Expires, bool Invalidated, bool Persist);
+public record RefreshToken(string Token, string UserId, string JwtId, DateTime Expires, bool Invalidated, bool Persist);

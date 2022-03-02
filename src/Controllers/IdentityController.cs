@@ -29,8 +29,9 @@ public class IdentityController : ControllerBase
         var claims = _tokenService.GenerateClaims(email, role);
         (string token, _) = _tokenService.GenerateToken(claims);
 
+        string userId = email;
         string jti = claims.Single(x => x.Type == JwtRegisteredClaimNames.Jti).Value;
-        RefreshToken refreshToken = _refreshTokenRepository.CreateNewRefreshToken(jti, persist);
+        RefreshToken refreshToken = _refreshTokenRepository.CreateNewRefreshToken(userId, jti, persist);
 
         DateTime? expireCookieTime = persist ? refreshToken!.Expires : null;
         _cookieService.SetCookie(CookieConstats.AuthToken, token, expireCookieTime);
