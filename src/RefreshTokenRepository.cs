@@ -36,6 +36,12 @@ public class RefreshTokenRepository
         if (refreshTokens.TryGetValue(token, out var refreshToken))
             refreshTokens.TryUpdate(token, refreshToken with { Invalidated = true }, refreshToken);
     }
+
+    // For testing.
+    public IEnumerable<RefreshToken> GetRefreshTokens(string userId)
+    {
+        return refreshTokens.Values.Where(x => x.UserId == userId);
+    }
 }
 
 public record RefreshToken(string Token, string UserId, string JwtId, DateTime Expires, bool Invalidated, bool Persist);

@@ -1,4 +1,5 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -51,6 +52,16 @@ public class IdentityController : ControllerBase
         _cookieService.SetCookie(CookieConstats.RefreshToken, "", DateTime.UnixEpoch);
 
         return Ok();
+    }
+
+    [Authorize]
+    [HttpGet("refresh-tokens")]
+    public IActionResult GetRefreshTokens() // For testing.
+    {
+        string userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var refreshTokens = _refreshTokenRepository.GetRefreshTokens(userId);
+
+        return Ok(refreshTokens.OrderBy(x => x.Expires).Select(x => new { x.Token, x.Expires, x.Invalidated }));
     }
 
     [HttpGet("test-token")]
