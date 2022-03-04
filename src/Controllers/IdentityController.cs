@@ -23,9 +23,8 @@ public class IdentityController : ControllerBase
     [HttpGet("login")]
     public IActionResult Login([FromQuery] string email, [FromQuery] string? role, [FromQuery] bool persist = true)
     {
-        string? existingJtiToken = User.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Jti)?.Value;
-        if (existingJtiToken is not null)
-            _refreshTokenRepository.InvalidateToken(existingJtiToken);
+        if (UserHasValidSession())
+            return NoContent(); // Probably not a good response.
 
         var claims = _tokenService.GenerateClaims(email, role);
         (string token, _) = _tokenService.GenerateToken(claims);
@@ -41,15 +40,33 @@ public class IdentityController : ControllerBase
         return Ok();
     }
 
+    private bool UserHasValidSession()
+    {
+        string? exsistingJti = User.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Jti)?.Value;
+        if (exsistingJti is null)
+            return false;
+
+        string? existingRefreshToken = _cookieService.GetCookie(CookieConstats.RefreshToken);
+        if (existingRefreshToken is null)
+            return false;
+
+        var refreshToken = _refreshTokenRepository.GetRefreshToken(existingRefreshToken);
+        return refreshToken is not null
+            && !refreshToken.Invalidated
+            && refreshToken.Expires > DateTime.UtcNow
+            && refreshToken.JwtId == exsistingJti;
+    }
+
     [Authorize]
     [HttpGet("logout")]
     public IActionResult Logout()
     {
-        string existingJtiToken = User.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Jti)!.Value;
-        _refreshTokenRepository.InvalidateToken(existingJtiToken);
-
         _cookieService.SetCookie(CookieConstats.AuthToken, "", DateTime.UnixEpoch);
         _cookieService.SetCookie(CookieConstats.RefreshToken, "", DateTime.UnixEpoch);
+
+        string? existingRefreshToken = _cookieService.GetCookie(CookieConstats.RefreshToken);
+        if (existingRefreshToken is not null)
+            _refreshTokenRepository.InvalidateToken(existingRefreshToken);
 
         return Ok();
     }

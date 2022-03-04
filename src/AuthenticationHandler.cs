@@ -2,6 +2,7 @@
 using System.Net;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 
@@ -93,10 +94,31 @@ public class AuthenticationHandler : AuthenticationHandler<AuthenticationSchemeO
         _cookieService.SetCookie(CookieConstats.AuthToken, newAccessToken.Token, newRefreshToken.Persist ? newRefreshToken.Expires : null);
         _cookieService.SetCookie(CookieConstats.RefreshToken, newRefreshToken.Token, newRefreshToken.Persist ? newRefreshToken.Expires : null);
 
+        // For controllers to use the newest refresh token.
+        OverrideRefreshTokenRequestCookie(newRefreshToken.Token);
+
         var claimsIdentity = new ClaimsIdentity(newAccessToken.Claims, Scheme.Name);
         var ticket = new AuthenticationTicket(new ClaimsPrincipal(claimsIdentity), Scheme.Name);
 
         return Task.FromResult(AuthenticateResult.Success(ticket));
+    }
+
+    private static readonly Regex refreshTokenCookieRegex = new Regex($";?{CookieConstats.RefreshToken}=[^=;]*;?", RegexOptions.Compiled);
+    private void OverrideRefreshTokenRequestCookie(string token)
+    {
+        string? existingCookies = Request.Headers["Cookie"];
+        if (string.IsNullOrEmpty(existingCookies))
+            return;
+
+        var match = refreshTokenCookieRegex.Match(existingCookies);
+        if (!match.Success)
+            return;
+
+        string removed = existingCookies.Replace(match.Value, null);
+        string newCookies = $"{removed};{CookieConstats.RefreshToken}={token}";
+
+        Request.Headers.Remove("Cookie");
+        Request.Headers.Add("Cookie", newCookies);
     }
 
     protected override Task HandleChallengeAsync(AuthenticationProperties properties)
